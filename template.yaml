@@ -9,6 +9,7 @@ Resources:
       Handler: service.handler
       Runtime: python3.6
       CodeUri: service.zip
+      Timeout: 300
       Environment:
         Variables:
           BUCKET: !Ref Bucket

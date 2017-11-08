@@ -2,10 +2,10 @@
 cfn-flip-service
 """
 
-from os import path
 from urllib import request
 import boto3
 import feedparser
+import os
 import yaml
 
 CONFIG_FILE = "config.yaml"
@@ -24,7 +24,7 @@ def handle_feed(bucket, name, url):
     keys = [
         obj["Key"][len(name) + 1:]
         for page in paginator.paginate(Bucket=bucket, Prefix="{}/".format(name))
-        for obj in page["Contents"]
+        for obj in page.get("Contents", [])
     ]
 
     for entry in feed.entries[:MAX_ENTRIES]:
@@ -36,28 +36,28 @@ def handle_feed(bucket, name, url):
                 continue
 
             href = enclosure["href"]
-            file_name = path.basename(href)
+            file_name = os.path.basename(href)
 
             if file_name in keys:
                 print("Already downloaded '{}', skipping the remainder".format(href))
                 break
 
+            print("Saving {}/{}".format(name, file_name))
+
             stream = request.urlopen(enclosure["href"])
 
-            client.put_object(
+            client.upload_fileobj(
+                Fileobj=stream,
                 Bucket=bucket,
                 Key="{}/{}".format(name, file_name),
-                ContentType=file_type,
-                ContentDisposition="inline",
-                Body=stream
             )
 
 def handler(event, context):
     bucket = os.environ["BUCKET"]
 
     # Read in the config
-    with client.get_object(Bucket=bucket, Key=CONFIG_FILE) as response:
-        config = yaml.load(response["Body"])
+    response = client.get_object(Bucket=bucket, Key=CONFIG_FILE)
+    config = yaml.load(response["Body"])
 
     for name, url in config["feeds"].items():
-        handle_feed(name, url)
+        handle_feed(bucket, name, url)
