@@ -39,9 +39,16 @@ rm -r $BUILD_DIR
 rm template.out.yaml
 
 # Get the bucket and upload the config
-bucket=$(aws cloudformation describe-stacks --stack-name $STACK_NAME | jq -r .Stacks[0].Outputs[0].OutputValue)
+outputs=$(aws cloudformation describe-stacks --stack-name $STACK_NAME | jq '.Stacks[0].Outputs | map({key: .OutputKey, value: .OutputValue}) | from_entries')
+bucket=$(echo $outputs | jq -r .BucketName)
+function=$(echo $outputs | jq -r .FunctionName)
 
-aws s3 cp config.yaml s3://$bucket
+if [ -z "$(aws s3 ls s3://$bucket/config.yaml)" ]; then
+    aws s3 cp config.yaml s3://$bucket
+fi
+
+echo "Invoking the podless service..."
+aws lambda invoke --function-name $function --invocation-type Event /dev/null >/dev/null
 
 echo
 echo "The bucket is: $bucket"

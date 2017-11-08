@@ -17,7 +17,7 @@ Resources:
         Cron:
           Type: Schedule
           Properties:
-            Schedule: rate(5 minutes)
+            Schedule: rate(1 day)
       Policies:
       - Version: '2012-10-17'
         Statement:
@@ -34,3 +34,6 @@ Outputs:
   BucketName:
     Description: Bucket Name
     Value: !Ref Bucket
+  FunctionName:
+    Description: Function Name
+    Value: !Ref Function
