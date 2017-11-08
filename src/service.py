@@ -28,21 +28,24 @@ def handle_feed(bucket, name, url):
     ]
 
     for entry in feed.entries[:MAX_ENTRIES]:
+        skip = False
+
         for enclosure in entry.enclosures:
             file_type = enclosure["type"]
 
             if file_type not in SUPPORTED_TYPES:
-                print("Ignoring enclosure of type: {}".format(file_type))
+                print("{}: Ignoring enclosure of type: {}".format(name, file_type))
                 continue
 
             href = enclosure["href"]
             file_name = os.path.basename(href)
 
             if file_name in keys:
-                print("Already downloaded '{}', skipping the remainder".format(href))
+                print("{}: Already downloaded '{}', skipping the remainder".format(name, href))
+                skip = True
                 break
 
-            print("Saving {}/{}".format(name, file_name))
+            print("{}: Saving {}/{}".format(name, name, file_name))
 
             stream = request.urlopen(enclosure["href"])
 
@@ -51,6 +54,9 @@ def handle_feed(bucket, name, url):
                 Bucket=bucket,
                 Key="{}/{}".format(name, file_name),
             )
+
+        if skip:
+            break
 
 def handler(event, context):
     bucket = os.environ["BUCKET"]
